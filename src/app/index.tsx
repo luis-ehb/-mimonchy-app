@@ -16,6 +16,15 @@ import { useFulfillment } from '@/context/fulfillment-context';
 
 const ALL_CATEGORY = 'all';
 
+// Tamaño del logo en la barra superior y alto real que ocupa la barra
+// (más allá del área segura del sistema) para reservarle ese espacio al
+// contenido del scroll — así la portada nunca queda tapada detrás de la
+// barra, sin importar qué tan grande sea el logo.
+const TOP_BAR_LOGO_SIZE = 56;
+const TOP_BAR_GAP_TOP = Spacing.one;
+const TOP_BAR_GAP_BOTTOM = Spacing.two;
+const TOP_BAR_CONTENT_HEIGHT = TOP_BAR_GAP_TOP + TOP_BAR_LOGO_SIZE + TOP_BAR_GAP_BOTTOM;
+
 const FULFILLMENT_LABEL: Record<Fulfillment, string> = {
   delivery: 'Solo Delivery',
   pickup: 'Solo Pickup',
@@ -53,6 +62,7 @@ export default function HomeScreen() {
 
   const insets = {
     ...safeAreaInsets,
+    top: safeAreaInsets.top + TOP_BAR_CONTENT_HEIGHT,
     bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
   };
 
@@ -245,7 +255,7 @@ export default function HomeScreen() {
       <View
         style={[
           styles.topBar,
-          { backgroundColor: theme.background, paddingTop: safeAreaInsets.top + Spacing.one },
+          { backgroundColor: theme.background, paddingTop: safeAreaInsets.top + TOP_BAR_GAP_TOP },
         ]}>
         <Image source={require('@/assets/images/logo.png')} style={styles.topBarLogo} contentFit="contain" />
 
@@ -340,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.two,
+    paddingBottom: TOP_BAR_GAP_BOTTOM,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -348,8 +358,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   topBarLogo: {
-    width: 48,
-    height: 48,
+    width: TOP_BAR_LOGO_SIZE,
+    height: TOP_BAR_LOGO_SIZE,
   },
   topBarButton: {
     width: 36,
