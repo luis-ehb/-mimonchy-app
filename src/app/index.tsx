@@ -108,9 +108,11 @@ export default function HomeScreen() {
         {/* Nombre, rating y tagline */}
         <View style={styles.headerBlock}>
           <View style={styles.nameRow}>
-            <ThemedText type="subtitle" style={styles.restaurantName}>
-              {testRestaurant.name}
-            </ThemedText>
+            <View style={styles.nameCol}>
+              <ThemedText type="subtitle" style={styles.restaurantName}>
+                {testRestaurant.name}
+              </ThemedText>
+            </View>
             <View style={[styles.ratingPill, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText type="smallBold">⭐ {testRestaurant.rating}</ThemedText>
             </View>
@@ -479,6 +481,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
+  },
+  nameCol: {
+    flex: 1,
+    minWidth: 0,
   },
   restaurantName: {
     flexShrink: 1,
