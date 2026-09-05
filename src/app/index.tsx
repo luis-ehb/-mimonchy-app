@@ -8,7 +8,6 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MenuItemCard } from '@/components/menu/menu-item-card';
 import { menu, testRestaurant } from '@/constants/mock-data';
-import { LOGO_DATA_URI } from '@/constants/logo';
 import type { Fulfillment } from '@/types/menu';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -248,7 +247,7 @@ export default function HomeScreen() {
           styles.topBar,
           { backgroundColor: theme.background, paddingTop: safeAreaInsets.top + Spacing.one },
         ]}>
-        <Image source={{ uri: LOGO_DATA_URI }} style={styles.topBarLogo} contentFit="contain" />
+        <Image source={require('@/assets/images/logo.png')} style={styles.topBarLogo} contentFit="contain" />
 
         <View style={styles.topBarAddress}>
           <ThemedText type="small" themeColor="textSecondary" style={styles.topBarAddressLabel}>
@@ -349,8 +348,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   topBarLogo: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
   },
   topBarButton: {
     width: 36,
