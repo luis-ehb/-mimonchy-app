@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { extraPriceForSize, type MenuExtra, type MenuItem, type PizzaSize } from '@/constants/mock-data';
+import { unitPriceForItem } from '@/lib/pricing';
+import type { MenuExtra, MenuItem, PizzaSize } from '@/types/menu';
 
 export type CartLine = {
   key: string;
@@ -57,9 +58,7 @@ function buildLineKey(itemId: string, notes?: string, extras?: MenuExtra[], size
 }
 
 function computeUnitPrice(item: MenuItem, extras?: MenuExtra[], size?: PizzaSize) {
-  const basePrice = item.isPizza && item.sizePrices && size ? item.sizePrices[size] : item.price;
-  const extrasTotal = (extras ?? []).reduce((sum, extra) => sum + extraPriceForSize(extra, size), 0);
-  return basePrice + extrasTotal;
+  return unitPriceForItem(item, { size, extras });
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {

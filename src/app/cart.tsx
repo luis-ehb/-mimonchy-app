@@ -5,7 +5,11 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { menu, PIZZA_SIZE_LABELS, testRestaurant } from '@/constants/mock-data';
+import { CartLineCard } from '@/components/cart/cart-line-card';
+import { FulfillmentToggle } from '@/components/cart/fulfillment-toggle';
+import { OrderSummaryCard } from '@/components/cart/order-summary-card';
+import { ProductSuggestionCard } from '@/components/menu/product-suggestion-card';
+import { menu, testRestaurant } from '@/constants/mock-data';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/context/cart-context';
@@ -21,7 +25,7 @@ export default function CartScreen() {
   const router = useRouter();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { lines, addItem, decrementItem, totalCount, totalPrice } = useCart();
+  const { lines, addItem, decrementItem, totalPrice } = useCart();
   const { fulfillment, currentAddress, selectFulfillment, openAddressModal } = useFulfillment();
 
   const isPickup = fulfillment === 'pickup';
@@ -47,6 +51,13 @@ export default function CartScreen() {
 
   const grandTotal = totalPrice + deliveryFee + MOCK_SERVICE_FEE;
 
+  const summaryRows = [
+    { label: 'Total Productos', value: totalPrice },
+    ...(!isPickup ? [{ label: 'Total Delivery', value: deliveryFee }] : []),
+    { label: 'Service Fee', value: MOCK_SERVICE_FEE },
+    { label: 'Total', value: grandTotal, bold: true },
+  ];
+
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + Spacing.two }]}>
@@ -61,63 +72,12 @@ export default function CartScreen() {
         <View style={styles.backButton} />
       </View>
 
-      {/* Toggle Delivery/Pickup + dirección de entrega, patrón tomado de la
-          referencia QUIK. Predeterminado en Delivery. Tocar la dirección bajo
-          "Delivery" abre el selector de direcciones guardadas (estado compartido
-          con la pantalla principal vía FulfillmentProvider). */}
-      <View style={styles.fulfillmentBar}>
-        <Pressable
-          onPress={() => selectFulfillment('delivery')}
-          style={[
-            styles.fulfillmentButton,
-            { backgroundColor: fulfillment === 'delivery' ? theme.accent : theme.backgroundElement },
-          ]}>
-          <View style={styles.fulfillmentButtonTop}>
-            <ThemedText style={styles.fulfillmentIcon}>🛵</ThemedText>
-            <ThemedText
-              type="smallBold"
-              style={fulfillment === 'delivery' ? styles.fulfillmentTextActive : undefined}
-              themeColor={fulfillment === 'delivery' ? undefined : 'textSecondary'}>
-              Delivery
-            </ThemedText>
-          </View>
-
-          {fulfillment === 'delivery' ? (
-            <Pressable onPress={openAddressModal} hitSlop={8}>
-              <ThemedText type="small" style={styles.fulfillmentTextActive}>
-                {currentAddress.label} ⌄
-              </ThemedText>
-            </Pressable>
-          ) : (
-            <ThemedText type="small" themeColor="textSecondary">
-              {currentAddress.label}
-            </ThemedText>
-          )}
-        </Pressable>
-
-        <Pressable
-          onPress={() => selectFulfillment('pickup')}
-          style={[
-            styles.fulfillmentButton,
-            { backgroundColor: fulfillment === 'pickup' ? theme.accent : theme.backgroundElement },
-          ]}>
-          <View style={styles.fulfillmentButtonTop}>
-            <ThemedText style={styles.fulfillmentIcon}>🏪</ThemedText>
-            <ThemedText
-              type="smallBold"
-              style={fulfillment === 'pickup' ? styles.fulfillmentTextActive : undefined}
-              themeColor={fulfillment === 'pickup' ? undefined : 'textSecondary'}>
-              Pickup
-            </ThemedText>
-          </View>
-          <ThemedText
-            type="small"
-            style={fulfillment === 'pickup' ? styles.fulfillmentTextActive : undefined}
-            themeColor={fulfillment === 'pickup' ? undefined : 'textSecondary'}>
-            Retirar en el local
-          </ThemedText>
-        </Pressable>
-      </View>
+      <FulfillmentToggle
+        fulfillment={fulfillment}
+        currentAddress={currentAddress}
+        onSelect={selectFulfillment}
+        onOpenAddressModal={openAddressModal}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -147,92 +107,27 @@ export default function CartScreen() {
           </View>
         ) : (
           <View style={styles.linesWrapper}>
-            {lines.map((line) => {
-              // Descripción de la línea: tamaño de pizza (si aplica) + adicionales elegidos.
-              const details = [
-                line.size ? PIZZA_SIZE_LABELS[line.size] : null,
-                line.extras && line.extras.length > 0
-                  ? `Adicionales: ${line.extras.map((extra) => extra.name).join(', ')}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(' · ');
-
-              return (
-                <Pressable
-                  key={line.key}
-                  disabled={!line.item.isPizza}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/item/[id]',
-                      params: {
-                        id: line.item.id,
-                        editKey: line.key,
-                        qty: String(line.quantity),
-                        notes: line.notes ?? '',
-                        size: line.size ?? '',
-                        extras: (line.extras ?? []).map((extra) => extra.id).join(','),
-                      },
-                    })
-                  }>
-                  <ThemedView type="backgroundElement" style={styles.lineCard}>
-                    <View
-                      style={[
-                        styles.lineImagePlaceholder,
-                        { backgroundColor: theme.backgroundSelected },
-                      ]}>
-                      <ThemedText style={styles.lineEmoji}>{line.item.emoji ?? '🍕'}</ThemedText>
-                    </View>
-
-                    <View style={styles.lineInfo}>
-                      <ThemedText type="smallBold">{line.item.name}</ThemedText>
-                      {details.length > 0 && (
-                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                          {details}
-                        </ThemedText>
-                      )}
-                      {line.notes && (
-                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                          {line.notes}
-                        </ThemedText>
-                      )}
-                      <ThemedText type="smallBold" themeColor="primary" style={styles.lineSubtotal}>
-                        ${(line.unitPrice * line.quantity).toFixed(2)}
-                      </ThemedText>
-                      {line.item.isPizza && (
-                        <ThemedText type="small" themeColor="primary" style={styles.lineEditHint}>
-                          Toca para editar
-                        </ThemedText>
-                      )}
-                    </View>
-
-                    <View style={styles.stepper}>
-                      <Pressable
-                        onPress={(event) => {
-                          event.stopPropagation();
-                          decrementItem(line.item.id, line.notes, line.extras, line.size);
-                        }}
-                        style={[styles.stepperButton, { backgroundColor: theme.backgroundSelected }]}>
-                        <ThemedText type="smallBold">−</ThemedText>
-                      </Pressable>
-                      <ThemedText type="smallBold" style={styles.stepperValue}>
-                        {line.quantity}
-                      </ThemedText>
-                      <Pressable
-                        onPress={(event) => {
-                          event.stopPropagation();
-                          addItem(line.item, 1, line.notes, line.extras, line.size);
-                        }}
-                        style={[styles.stepperButton, { backgroundColor: theme.primary }]}>
-                        <ThemedText type="smallBold" style={styles.stepperButtonAddText}>
-                          +
-                        </ThemedText>
-                      </Pressable>
-                    </View>
-                  </ThemedView>
-                </Pressable>
-              );
-            })}
+            {lines.map((line) => (
+              <CartLineCard
+                key={line.key}
+                line={line}
+                onPress={() =>
+                  router.push({
+                    pathname: '/item/[id]',
+                    params: {
+                      id: line.item.id,
+                      editKey: line.key,
+                      qty: String(line.quantity),
+                      notes: line.notes ?? '',
+                      size: line.size ?? '',
+                      extras: (line.extras ?? []).map((extra) => extra.id).join(','),
+                    },
+                  })
+                }
+                onDecrement={() => decrementItem(line.item.id, line.notes, line.extras, line.size)}
+                onIncrement={() => addItem(line.item, 1, line.notes, line.extras, line.size)}
+              />
+            ))}
           </View>
         )}
 
@@ -246,32 +141,11 @@ export default function CartScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.suggestionsRow}>
               {suggestions.map((item) => (
-                <ThemedView key={item.id} type="backgroundElement" style={styles.suggestionCard}>
-                  <View
-                    style={[
-                      styles.suggestionImagePlaceholder,
-                      { backgroundColor: theme.backgroundSelected },
-                    ]}>
-                    <ThemedText style={styles.suggestionEmoji}>{item.emoji ?? '🥤'}</ThemedText>
-                  </View>
-                  <ThemedText type="small" numberOfLines={1} style={styles.suggestionName}>
-                    {item.name}
-                  </ThemedText>
-                  <View style={styles.suggestionFooter}>
-                    <ThemedText type="smallBold" themeColor="primary">
-                      ${item.price.toFixed(2)}
-                    </ThemedText>
-                    <Pressable
-                      onPress={() =>
-                        item.isPizza ? router.push(`/item/${item.id}`) : addItem(item, 1)
-                      }
-                      style={[styles.suggestionAddButton, { backgroundColor: theme.primary }]}>
-                      <ThemedText type="smallBold" style={styles.suggestionAddText}>
-                        +
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                </ThemedView>
+                <ProductSuggestionCard
+                  key={item.id}
+                  item={item}
+                  onPress={() => (item.isPizza ? router.push(`/item/${item.id}`) : addItem(item, 1))}
+                />
               ))}
             </ScrollView>
           </View>
@@ -325,21 +199,7 @@ export default function CartScreen() {
               </ThemedView>
             )}
 
-            {/* Resumen de compra: desglose de productos, delivery, service fee y total.
-                La línea de delivery se omite en modo Pickup. */}
-            <ThemedView type="backgroundElement" style={styles.summaryCard}>
-              <ThemedText type="smallBold" style={styles.summaryCardTitle}>
-                Resumen de tu compra
-              </ThemedText>
-
-              <SummaryRow label="Total Productos" value={totalPrice} />
-              {!isPickup && <SummaryRow label="Total Delivery" value={deliveryFee} />}
-              <SummaryRow label="Service Fee" value={MOCK_SERVICE_FEE} />
-
-              <View style={[styles.summaryDivider, { backgroundColor: theme.backgroundSelected }]} />
-
-              <SummaryRow label="Total" value={grandTotal} bold />
-            </ThemedView>
+            <OrderSummaryCard rows={summaryRows} />
 
             {/* Puntos + botón de pago: antes vivían en una barra fija fuera
                 del ScrollView (se veía "anclada" tapando parte del pedido);
@@ -365,19 +225,6 @@ export default function CartScreen() {
         )}
       </ScrollView>
     </ThemedView>
-  );
-}
-
-function SummaryRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
-  return (
-    <View style={styles.summaryRow}>
-      <ThemedText type={bold ? 'smallBold' : 'small'} themeColor={bold ? undefined : 'textSecondary'}>
-        {label}
-      </ThemedText>
-      <ThemedText type={bold ? 'smallBold' : 'small'} themeColor={bold ? 'primary' : undefined}>
-        ${value.toFixed(2)}
-      </ThemedText>
-    </View>
   );
 }
 
@@ -408,30 +255,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     lineHeight: 24,
-  },
-  fulfillmentBar: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingBottom: Spacing.three,
-  },
-  fulfillmentButton: {
-    flex: 1,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    gap: Spacing.half,
-  },
-  fulfillmentButtonTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  fulfillmentIcon: {
-    fontSize: 16,
-  },
-  fulfillmentTextActive: {
-    color: '#FAF3E7',
   },
   scrollContent: {
     flexGrow: 1,
@@ -478,53 +301,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
-  lineCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  lineImagePlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lineEmoji: {
-    fontSize: 24,
-  },
-  lineInfo: {
-    flex: 1,
-    gap: Spacing.half,
-  },
-  lineSubtotal: {
-    marginTop: Spacing.half,
-  },
-  lineEditHint: {
-    marginTop: Spacing.half,
-    fontSize: 11,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  stepperButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperButtonAddText: {
-    color: '#FAF3E7',
-  },
-  stepperValue: {
-    minWidth: 16,
-    textAlign: 'center',
-  },
   suggestionsWrapper: {
     marginTop: Spacing.five,
     gap: Spacing.two,
@@ -535,42 +311,6 @@ const styles = StyleSheet.create({
   suggestionsRow: {
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-  },
-  suggestionCard: {
-    width: 128,
-    borderRadius: Spacing.three,
-    padding: Spacing.two,
-    gap: Spacing.one,
-  },
-  suggestionImagePlaceholder: {
-    height: 72,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionEmoji: {
-    fontSize: 32,
-  },
-  suggestionName: {
-    marginTop: Spacing.half,
-  },
-  suggestionFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.half,
-  },
-  suggestionAddButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  suggestionAddText: {
-    color: '#FAF3E7',
-    fontSize: 14,
-    lineHeight: 16,
   },
   deliveryCard: {
     marginTop: Spacing.five,
@@ -600,25 +340,6 @@ const styles = StyleSheet.create({
   },
   deliveryNote: {
     lineHeight: 18,
-  },
-  summaryCard: {
-    marginTop: Spacing.three,
-    marginHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.two,
-  },
-  summaryCardTitle: {
-    marginBottom: Spacing.one,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryDivider: {
-    height: 1,
-    marginVertical: Spacing.one,
   },
   payCard: {
     marginTop: Spacing.three,

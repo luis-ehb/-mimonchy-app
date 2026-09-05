@@ -6,8 +6,10 @@ import { useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fulfillment, menu, testRestaurant } from '@/constants/mock-data';
+import { MenuItemCard } from '@/components/menu/menu-item-card';
+import { menu, testRestaurant } from '@/constants/mock-data';
 import { LOGO_DATA_URI } from '@/constants/logo';
+import type { Fulfillment } from '@/types/menu';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/context/cart-context';
@@ -209,109 +211,14 @@ export default function HomeScreen() {
                   .reduce((sum, line) => sum + line.quantity, 0);
 
                 return (
-                  <Pressable key={item.id} onPress={() => router.push(`/item/${item.id}`)}>
-                    <ThemedView type="backgroundElement" style={styles.itemCard}>
-                      <View
-                        style={[
-                          styles.itemImagePlaceholder,
-                          { backgroundColor: theme.backgroundSelected },
-                        ]}>
-                        <ThemedText style={styles.itemEmoji}>{item.emoji ?? '🍕'}</ThemedText>
-                        {item.oldPrice && (
-                          <View style={[styles.promoBadge, { backgroundColor: theme.primary }]}>
-                            <ThemedText style={styles.promoBadgeText}>PROMO</ThemedText>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.itemInfo}>
-                        <ThemedText type="smallBold">{item.name}</ThemedText>
-                        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                          {item.description}
-                        </ThemedText>
-                        <View style={styles.priceRow}>
-                          {item.oldPrice && (
-                            <ThemedText
-                              type="small"
-                              themeColor="textSecondary"
-                              style={styles.oldPrice}>
-                              ${item.oldPrice.toFixed(2)}
-                            </ThemedText>
-                          )}
-                          <ThemedText type="smallBold" themeColor="primary">
-                            ${item.price.toFixed(2)}
-                          </ThemedText>
-                        </View>
-                      </View>
-
-                      {item.isPizza ? (
-                        // Las pizzas necesitan elegir tamaño/adicionales, así que
-                        // el "+" lleva al detalle en vez de agregar directo con un
-                        // tamaño adivinado (evita crear líneas de carrito ambiguas).
-                        <Pressable
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            router.push(`/item/${item.id}`);
-                          }}
-                          style={({ pressed }) => [
-                            styles.addButton,
-                            { backgroundColor: theme.primary },
-                            pressed && styles.pressed,
-                          ]}>
-                          <ThemedText type="smallBold" style={styles.addButtonText}>
-                            {quantityInCart > 0 ? quantityInCart : '+'}
-                          </ThemedText>
-                        </Pressable>
-                      ) : quantityInCart > 0 ? (
-                        <View style={styles.itemStepper}>
-                          <Pressable
-                            onPress={(event) => {
-                              event.stopPropagation();
-                              decrementItem(item.id);
-                            }}
-                            style={({ pressed }) => [
-                              styles.stepperButtonSmall,
-                              { backgroundColor: theme.backgroundSelected },
-                              pressed && styles.pressed,
-                            ]}>
-                            <ThemedText type="smallBold">−</ThemedText>
-                          </Pressable>
-                          <ThemedText type="smallBold" style={styles.itemStepperValue}>
-                            {quantityInCart}
-                          </ThemedText>
-                          <Pressable
-                            onPress={(event) => {
-                              event.stopPropagation();
-                              addItem(item);
-                            }}
-                            style={({ pressed }) => [
-                              styles.addButton,
-                              { backgroundColor: theme.primary },
-                              pressed && styles.pressed,
-                            ]}>
-                            <ThemedText type="smallBold" style={styles.addButtonText}>
-                              +
-                            </ThemedText>
-                          </Pressable>
-                        </View>
-                      ) : (
-                        <Pressable
-                          onPress={(event) => {
-                            event.stopPropagation();
-                            addItem(item);
-                          }}
-                          style={({ pressed }) => [
-                            styles.addButton,
-                            { backgroundColor: theme.primary },
-                            pressed && styles.pressed,
-                          ]}>
-                          <ThemedText type="smallBold" style={styles.addButtonText}>
-                            +
-                          </ThemedText>
-                        </Pressable>
-                      )}
-                    </ThemedView>
-                  </Pressable>
+                  <MenuItemCard
+                    key={item.id}
+                    item={item}
+                    quantityInCart={quantityInCart}
+                    onOpen={() => router.push(`/item/${item.id}`)}
+                    onAdd={() => addItem(item)}
+                    onDecrement={() => decrementItem(item.id)}
+                  />
                 );
               })}
             </View>

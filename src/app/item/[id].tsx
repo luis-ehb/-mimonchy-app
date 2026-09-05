@@ -5,17 +5,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import {
-  extraPriceForSize,
-  menu,
-  PIZZA_SIZE_LABELS,
-  PIZZA_SIZES,
-  type MenuExtra,
-  type PizzaSize,
-} from '@/constants/mock-data';
+import { SizeSelector } from '@/components/menu/size-selector';
+import { ExtrasList } from '@/components/menu/extras-list';
+import { ProductSuggestionCard } from '@/components/menu/product-suggestion-card';
+import { QuantityStepper } from '@/components/quantity-stepper';
+import { menu } from '@/constants/mock-data';
+import { shouldShowOldPrice, unitPriceForItem } from '@/lib/pricing';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/context/cart-context';
+import type { MenuExtra, PizzaSize } from '@/types/menu';
 
 export default function ItemDetailScreen() {
   const params = useLocalSearchParams<{
@@ -87,17 +86,8 @@ export default function ItemDetailScreen() {
     );
   };
 
-  // Precio base: si es pizza, depende del tamaño elegido; si no, el precio fijo del producto.
-  const basePrice = item.isPizza && item.sizePrices ? item.sizePrices[selectedSize] : item.price;
-  const extrasTotal = selectedExtras.reduce(
-    (sum, extra) => sum + extraPriceForSize(extra, item.isPizza ? selectedSize : undefined),
-    0,
-  );
-  const unitPrice = basePrice + extrasTotal;
-  // El precio tachado (promo) solo corresponde al precio de mediana, así que
-  // se muestra únicamente cuando ese es el tamaño seleccionado (o si el
-  // producto no es pizza y no tiene tamaños).
-  const showOldPrice = Boolean(item.oldPrice) && (!item.isPizza || selectedSize === 'mediana');
+  const unitPrice = unitPriceForItem(item, { size: selectedSize, extras: selectedExtras });
+  const showOldPrice = shouldShowOldPrice(item, selectedSize);
   const total = unitPrice * quantity;
 
   return (
@@ -136,75 +126,30 @@ export default function ItemDetailScreen() {
           </View>
 
           {item.isPizza && item.sizePrices && (
-            <View style={styles.sizeSection}>
+            <View>
               <ThemedText type="smallBold" style={styles.sectionLabel}>
                 Elige el tamaño
               </ThemedText>
-              <View style={styles.sizeRow}>
-                {PIZZA_SIZES.map((size) => {
-                  const active = selectedSize === size;
-                  return (
-                    <Pressable
-                      key={size}
-                      onPress={() => setSelectedSize(size)}
-                      style={[
-                        styles.sizeChip,
-                        { backgroundColor: active ? theme.primary : theme.backgroundElement },
-                      ]}>
-                      <ThemedText
-                        type="smallBold"
-                        style={active ? styles.sizeChipTextActive : undefined}
-                        themeColor={active ? undefined : 'text'}>
-                        {PIZZA_SIZE_LABELS[size]}
-                      </ThemedText>
-                      <ThemedText
-                        type="small"
-                        style={active ? styles.sizeChipTextActive : undefined}
-                        themeColor={active ? undefined : 'textSecondary'}>
-                        ${item.sizePrices![size].toFixed(2)}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <SizeSelector
+                selectedSize={selectedSize}
+                onSelect={setSelectedSize}
+                pricesBySize={item.sizePrices}
+              />
             </View>
           )}
 
           {item.extras && item.extras.length > 0 && (
-            <View style={styles.extrasSection}>
+            <View>
               <ThemedText type="smallBold" style={styles.sectionLabel}>
                 Adicionales
               </ThemedText>
-              {item.extras.map((extra) => {
-                const isSelected = selectedExtras.some((selected) => selected.id === extra.id);
-                const price = extraPriceForSize(extra, item.isPizza ? selectedSize : undefined);
-                return (
-                  <Pressable
-                    key={extra.id}
-                    onPress={() => toggleExtra(extra)}
-                    style={[
-                      styles.extraRow,
-                      { backgroundColor: theme.backgroundElement },
-                    ]}>
-                    <View style={styles.extraRowLeft}>
-                      <View
-                        style={[
-                          styles.checkbox,
-                          {
-                            backgroundColor: isSelected ? theme.primary : 'transparent',
-                            borderColor: isSelected ? theme.primary : theme.textSecondary,
-                          },
-                        ]}>
-                        {isSelected && <ThemedText style={styles.checkboxMark}>✓</ThemedText>}
-                      </View>
-                      <ThemedText type="small">{extra.name}</ThemedText>
-                    </View>
-                    <ThemedText type="small" themeColor="textSecondary">
-                      +${price.toFixed(2)}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
+              <ExtrasList
+                extras={item.extras}
+                selectedExtras={selectedExtras}
+                onToggle={toggleExtra}
+                isPizza={item.isPizza}
+                size={selectedSize}
+              />
             </View>
           )}
 
@@ -225,21 +170,12 @@ export default function ItemDetailScreen() {
 
           <View style={styles.quantityRow}>
             <ThemedText type="smallBold">Cantidad</ThemedText>
-            <View style={styles.stepper}>
-              <Pressable
-                onPress={() => setQuantity((current) => Math.max(1, current - 1))}
-                style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">−</ThemedText>
-              </Pressable>
-              <ThemedText type="smallBold" style={styles.stepperValue}>
-                {quantity}
-              </ThemedText>
-              <Pressable
-                onPress={() => setQuantity((current) => current + 1)}
-                style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">+</ThemedText>
-              </Pressable>
-            </View>
+            <QuantityStepper
+              quantity={quantity}
+              onDecrement={() => setQuantity((current) => Math.max(1, current - 1))}
+              onIncrement={() => setQuantity((current) => current + 1)}
+              size="lg"
+            />
           </View>
 
           {drinkSuggestions.length > 0 && (
@@ -252,30 +188,7 @@ export default function ItemDetailScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.drinksRow}>
                 {drinkSuggestions.map((bebida) => (
-                  <ThemedView key={bebida.id} type="backgroundElement" style={styles.drinkCard}>
-                    <View
-                      style={[
-                        styles.drinkImagePlaceholder,
-                        { backgroundColor: theme.backgroundSelected },
-                      ]}>
-                      <ThemedText style={styles.drinkEmoji}>{bebida.emoji ?? '🥤'}</ThemedText>
-                    </View>
-                    <ThemedText type="small" numberOfLines={1} style={styles.drinkName}>
-                      {bebida.name}
-                    </ThemedText>
-                    <View style={styles.drinkFooter}>
-                      <ThemedText type="smallBold" themeColor="primary">
-                        ${bebida.price.toFixed(2)}
-                      </ThemedText>
-                      <Pressable
-                        onPress={() => addItem(bebida, 1)}
-                        style={[styles.drinkAddButton, { backgroundColor: theme.primary }]}>
-                        <ThemedText type="smallBold" style={styles.drinkAddText}>
-                          +
-                        </ThemedText>
-                      </Pressable>
-                    </View>
-                  </ThemedView>
+                  <ProductSuggestionCard key={bebida.id} item={bebida} onPress={() => addItem(bebida, 1)} />
                 ))}
               </ScrollView>
             </View>
@@ -368,53 +281,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     marginTop: Spacing.five,
   },
-  sizeSection: {
-    gap: Spacing.two,
-  },
-  sizeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-    marginTop: Spacing.two,
-  },
-  sizeChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.three,
-    gap: Spacing.half,
-  },
-  sizeChipTextActive: {
-    color: '#FAF3E7',
-  },
-  extrasSection: {
-    gap: Spacing.two,
-  },
-  extraRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  extraRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: Spacing.one,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxMark: {
-    color: '#FAF3E7',
-    fontSize: 13,
-    lineHeight: 15,
-  },
   notesInput: {
     marginTop: Spacing.two,
     minHeight: 72,
@@ -428,22 +294,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: Spacing.five,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  stepperButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    minWidth: 20,
-    textAlign: 'center',
   },
   addButton: {
     marginHorizontal: Spacing.three,
@@ -462,41 +312,5 @@ const styles = StyleSheet.create({
   drinksRow: {
     gap: Spacing.two,
     paddingRight: Spacing.three,
-  },
-  drinkCard: {
-    width: 128,
-    borderRadius: Spacing.three,
-    padding: Spacing.two,
-    gap: Spacing.one,
-  },
-  drinkImagePlaceholder: {
-    height: 72,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  drinkEmoji: {
-    fontSize: 32,
-  },
-  drinkName: {
-    marginTop: Spacing.half,
-  },
-  drinkFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.half,
-  },
-  drinkAddButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  drinkAddText: {
-    color: '#FAF3E7',
-    fontSize: 14,
-    lineHeight: 16,
   },
 });

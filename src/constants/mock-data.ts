@@ -2,83 +2,14 @@
  * Datos de prueba (mock) para la Fase 1 de mimonchy.
  * Restaurante ficticio usado mientras no hay un aliado real integrado.
  * Cuando se conecte Supabase, esto se reemplaza por datos reales del backend.
+ *
+ * Los tipos viven en `@/types/menu`; este archivo solo contiene datos.
  */
+import type { MenuCategory, MenuExtra, Restaurant } from '@/types/menu';
 
-export type MenuExtra = {
-  id: string;
-  name: string;
-  /**
-   * Precio del adicional cuando la pizza es personal o mediana.
-   * Cada comercio define su propio precio (este es el de Pizzería Bella
-   * Napoli); por defecto en mimonchy se sugiere $1 para este tramo.
-   */
-  priceSmall: number;
-  /**
-   * Precio del adicional cuando la pizza es familiar. Por defecto en
-   * mimonchy se sugiere $1.50, pero cada comercio puede marcar el suyo.
-   */
-  priceFamiliar: number;
-};
-
-/** Tamaños de pizza disponibles. Solo aplica a productos con `isPizza: true`. */
-export type PizzaSize = 'personal' | 'mediana' | 'familiar';
-
-export const PIZZA_SIZES: PizzaSize[] = ['personal', 'mediana', 'familiar'];
-
-export const PIZZA_SIZE_LABELS: Record<PizzaSize, string> = {
-  personal: 'Personal',
-  mediana: 'Mediana',
-  familiar: 'Familiar',
-};
-
-/** Precio de un adicional según el tamaño de pizza elegido. */
-export function extraPriceForSize(extra: MenuExtra, size?: PizzaSize) {
-  return size === 'familiar' ? extra.priceFamiliar : extra.priceSmall;
-}
-
-export type MenuItem = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  oldPrice?: number;
-  /** Emoji usado como placeholder de foto mientras no hay fotos reales del producto. */
-  emoji?: string;
-  /**
-   * Adicionales que el comercio ofrece para este producto (ej. extra queso).
-   * Cada comercio define los suyos — esta lista es la del restaurante de
-   * prueba; cuando haya multi-comercio (Fase 2), cada uno tendrá la propia.
-   */
-  extras?: MenuExtra[];
-  /**
-   * Marca este producto como pizza: internamente le indica a la app que debe
-   * mostrar el selector de tamaño (Personal/Mediana/Familiar) en el detalle.
-   * Se activa por producto: hoy Pizzería Bella Napoli es 100% pizzería, pero
-   * en multi-comercio (Fase 2) cada producto de cada comercio marcará el suyo.
-   */
-  isPizza?: boolean;
-  /**
-   * Precio de este producto según el tamaño, cuando `isPizza` es true.
-   * `price` (arriba) se mantiene igual al precio de la mediana, para no
-   * romper las pantallas que todavía muestran un precio único (ej. listado).
-   */
-  sizePrices?: Record<PizzaSize, number>;
-};
-
-export type MenuCategory = {
-  id: string;
-  title: string;
-  items: MenuItem[];
-};
-
-export type Fulfillment = 'delivery' | 'pickup' | 'delivery_pickup';
-
-/** Rubro del comercio. Hoy solo existe 'pizzeria'; se amplía en Fase 2 (multi-comercio). */
-export type RestaurantType = 'pizzeria';
-
-export const testRestaurant = {
+export const testRestaurant: Restaurant = {
   name: 'Pizzería Bella Napoli',
-  type: 'pizzeria' as RestaurantType,
+  type: 'pizzeria',
   tagline: 'Pizza artesanal al horno de leña',
   rating: 4.8,
   distance: '850 m',
@@ -88,7 +19,7 @@ export const testRestaurant = {
   phone: '+58 412-123 4567',
   instagram: '@bellanapoli.ve',
   whatsapp: '+58 412-123 4567',
-  fulfillment: 'delivery_pickup' as Fulfillment,
+  fulfillment: 'delivery_pickup',
 };
 
 // Adicionales del restaurante de prueba. Precio según el tramo de tamaño:
